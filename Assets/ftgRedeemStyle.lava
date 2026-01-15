@@ -1,0 +1,307 @@
+//- V4 of the cafe QR capture PWA stylesheet
+//- 2025-01-10 | KN
+{% stylesheet %}
+{% comment %}
+    body.rock-blank { background-color: hsl(30deg 0% 1%);}
+    h1.page-title { display: none; }
+    img { max-width: 100%;
+        background: hsl(0 0% 0%);
+    }
+    main {
+        min-height: 100vh;
+        overflow: hidden;
+        }
+
+    //- Layout
+    #bid_19970 {
+
+        }
+
+    //- Initial screen and container formatting
+    #qr-container {
+        position: relative;
+        overflow: hidden;
+        background: #000;
+        height: 100vh;
+        }
+    #start-screen {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 4rem;
+        }
+
+
+    //- Button styling for the scan now, cancel, and the back to camera buttons.
+
+    .scanner-btn {
+        width: 100%;
+        outline: none;
+        color: #fff;
+        font-size: 1.8rem;
+        font-weight: 700;
+        padding: .8rem;
+        text-transform: uppercase;
+        border-radius: 12rem;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        border: none;
+        position: relative;
+        user-select: none;
+        -webkit-tap-highlight-color: none;
+        }
+
+    #scan-btn {
+        background: hsl(120 100% 25%);
+        border: 3px solid hsl(120 100% 35%);
+        box-shadow:
+                0 0 30px hsla(120, 100%, 45%, 0.4),
+                0 8px 20px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 hsla(120, 100%, 45%, 0.3);
+
+            &:active {
+                transform: scale(0.96) translateY(2px);
+                box-shadow:
+                    0 0 50px hsla(120, 100%, 45%, 0.7),
+                    0 4px 10px rgba(0, 0, 0, 0.5),
+                    inset 0 1px 0 hsla(120, 100%, 45%, 0.3);
+                }
+        }
+    #cancel-btn {
+        background: hsl(0, 81%, 39%);
+        border: 3px solid hsl(0, 81%, 60%);
+        box-shadow:
+            0 0 30px hsla(0, 81%, 50%, 0.4),
+            0 8px 20px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 hsla(0, 81%, 60%, 0.3);
+
+            &:active {
+                transform: scale(0.96) translateY(2px);
+                box-shadow:
+                    0 0 50px hsla(0, 81%, 50%, 0.7),
+                    0 4px 10px rgba(0, 0, 0, 0.5),
+                    inset 0 1px 0 hsla(0, 81%, 60%, 0.3);
+                }
+        }
+
+    //- Scanning screen elements
+    #scanner-screen {
+        position: absolute;
+        top: 150px;
+        left: 0;
+        right: 0;
+        display: flex;
+        height: 100vh;
+        flex-direction: column;
+        justify-content: space-between;
+        background-color: hsl(0 0% 75%);
+        border-radius: 2rem 2rem 2rem 0;
+        transform: translateY(0);
+        }
+    #video-container {
+        position: relative;
+        }
+    #video {
+        object-fit: cover;
+        border-radius: 12px;
+        background: #111;
+        }
+{% endcomment %}
+
+    /* ============================
+       BASE LAYOUT & RESETS
+       ============================ */
+    body, .rock-blank {
+        background-color: #000 !important;
+        overflow: hidden; /* Prevent scrolling while scanning */
+    }
+
+    /* Hide standard Rock UI elements if they leak through */
+    .zone-configuration, .block-configuration, #cms-admin-footer { display: none !important; }
+
+    #pwa-container {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* ============================
+       START SCREEN
+       ============================ */
+    .start-screen {
+        width: 100%;
+        height: 100%;
+        background-color: hsl(30deg 0% 0%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between; /* Logo top, Button bottom */
+        padding: 4rem 2rem 6rem 2rem; /* Extra padding bottom for thumb reach */
+        box-sizing: border-box;
+    }
+
+    .logo-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .app-logo {
+        max-width: 100%;
+        height: auto;
+        max-height: 40vh;
+    }
+
+    /* ============================
+       SCANNER SHEET (Bottom Sheet)
+       ============================ */
+    .scanner-sheet {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 85%; /* Covers 85% of screen */
+        box-shadow: rgba(255, 255, 255, 0.16) 0px 3px 6px, rgba(255, 255, 255, 0.23) 0px 3px 6px;
+        /*box-shadow: 0px -10px 30px rgba(255,255,255,0.5);*/
+
+        /* GLASSY BRAND COLOR #97ca42 */
+        /*background: rgba(151, 202, 66, 0.9);*/
+        background: rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px); /* iOS support */
+
+        /* Subtle highlight on top edge for glass effect */
+        border-top: 2px solid rgba(255, 255, 255, 0.6);
+        border-top-left-radius: 2rem;
+        border-top-right-radius: 2rem;
+
+
+        /* Animation State: Hidden by default */
+        transform: translateY(100%);
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 1000;
+
+        display: flex;
+        flex-direction: column;
+        padding: 2rem; /* Content padding */
+        box-sizing: border-box;
+    }
+
+    .scanner-sheet.active {
+        transform: translateY(0%);
+    }
+
+    /* Video/Canvas Container */
+    .viewport-container {
+        flex: 1;
+        width: 100%;
+        background: #000;
+        border-radius: 1rem;
+        overflow: hidden;
+        position: relative;
+        margin-bottom: 2rem;
+        border: 2px solid hsl(19, 40%, 30%);
+    }
+
+    #scan-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* The canvas is used for the "Freeze" effect */
+    #scan-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: none; /* Hidden until we freeze */
+    }
+
+    /* ============================
+       OVERLAYS
+       ============================ */
+    .validation-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+
+    .validation-overlay.visible {
+        opacity: 1;
+    }
+
+    .validation-text {
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* Simple Spinner */
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ============================
+       BUTTONS
+       ============================ */
+    .btn-action {
+        width: 100%;
+        padding: 1.5rem;
+        border: none;
+        border-radius: 100px; /* Pill shape */
+        font-size: 1.25rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        transition: transform 0.1s;
+    }
+
+    .btn-action:active {
+        transform: scale(0.98);
+    }
+
+    .btn-green {
+        background-color: hsl(120, 100%, 25%);
+        color: white;
+        border: 2px solid hsl(120, 100%, 35%);
+    }
+
+    .btn-red {
+        background-color: hsl(0, 70%, 40%);
+        color: white;
+        border: 2px solid hsl(0, 70%, 50%);
+        margin-top: auto; /* Push to bottom if space allows */
+    }
+
+{% endstylesheet %}

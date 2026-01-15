@@ -1,0 +1,47 @@
+<%@ Master Language="C#" AutoEventWireup="true" Inherits="Rock.Web.UI.RockMasterPage" %>
+<!DOCTYPE html>
+<html class="no-js">
+<head runat="server">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="theme-color" content="#000000">
+
+    
+    <asp:ContentPlaceHolder ID="css" runat="server" />
+
+    <link rel="stylesheet" href="~/Themes/Rock/Styles/bootstrap.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="apple-touch-icon" href="https://rock.vrl.church/Themes/FTG-Scanner2/Assets/Images/FTG-Logo-192.png">
+    
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="~/Scripts/jquery-3.3.1.min.js"></script>
+    <script src="~/Scripts/bootstrap.bundle.min.js"></script>
+
+    
+    <link rel="manifest" href="/Themes/FTG-Scanner2/Assets/manifest.json">
+
+
+</head>
+<body class="rock-blank">
+    <form id="form1" runat="server">
+        <main class="container-fluid">
+            <div class="row">
+                
+                <Rock:Zone Name="Main" runat="server" />
+                
+            </div>
+        </main>
+    </form>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/Themes/FTG-Scanner2/Assets/sw.js');
+        }
+    </script>
+    
+    <asp:ContentPlaceHolder ID="scripts" runat="server" />
+</body>
+</html>

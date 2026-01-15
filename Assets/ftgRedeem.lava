@@ -1,0 +1,187 @@
+<div id="pwa-container">
+
+    <div class="start-screen">
+        <div class="logo-container">
+            <img src="~~/Assets/Images/FTG-Logo.jpg" alt="FTG Logo" class="app-logo">
+        </div>
+        <button id="btn-start" class="btn-action btn-green">Scan Now</button>
+    </div>
+
+    <div class="scanner-sheet" id="scanner-sheet">
+        <div class="viewport-container">
+            <video id="scan-video" playsinline muted></video>
+            <canvas id="scan-canvas"></canvas>
+
+            <div class="validation-overlay" id="val-overlay">
+                <div class="validation-text">
+                    <div class="spinner"></div>
+                    <span>Validating...</span>
+                </div>
+            </div>
+        </div>
+        <button id="btn-cancel" class="btn-action btn-red">Cancel</button>
+    </div>
+
+</div>
+
+<script>
+    (function() {
+        // --- Configuration ---
+        const config = {
+            validateDelay: 800, // ms to wait before redirecting
+            domainCheck: "vrl.church" // Simple security check
+        };
+
+        // --- Elements ---
+        const els = {
+            sheet: document.getElementById('scanner-sheet'),
+            video: document.getElementById('scan-video'),
+            canvas: document.getElementById('scan-canvas'),
+            ctx: document.getElementById('scan-canvas').getContext('2d', { willReadFrequently: true }),
+            overlay: document.getElementById('val-overlay'),
+            btnStart: document.getElementById('btn-start'),
+            btnCancel: document.getElementById('btn-cancel')
+        };
+
+        // --- State ---
+        let state = {
+            scanning: false,
+            stream: null,
+            animationId: null,
+            scanTimer: null
+        };
+
+        // --- Functions ---
+
+        // 1. Open Camera & Slide Up
+        async function startScanner() {
+            try {
+                // Request Camera
+                state.stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" }
+                });
+
+                // Attach to video element
+                els.video.srcObject = state.stream;
+                els.video.setAttribute("playsinline", true); // required to tell iOS not to go fullscreen
+                els.video.play();
+
+                // Show Sheet
+                els.sheet.classList.add('active');
+
+                // Start Loop
+                state.scanning = true;
+                requestAnimationFrame(scanLoop);
+
+                // Automatically stop if no scan happens
+                state.scanTimer = setTimeout(() => {
+                    if (state.scanning) {
+                        console.log("Battery Saver: Timeout reached.");
+                        stopScanner();
+                        // Optional: Alert the user so they know why it closed
+                        // alert("Scanner timed out to save battery.");
+                    }
+                }, 12000); // 12000 ms = 12 seconds
+
+            } catch (err) {
+                console.error("Camera Error:", err);
+                alert("Could not access camera. Please check permissions.");
+            }
+        }
+
+        // 2. Stop Camera & Slide Down
+        function stopScanner() {
+            state.scanning = false;
+
+            // Clear time out timer
+            if (state.scanTimer) {
+                clearTimeout(state.scanTimer);
+                state.scanTimer = null;
+            }
+            // Slide down
+            els.sheet.classList.remove('active');
+
+            // Stop Stream
+            if(state.stream) {
+                state.stream.getTracks().forEach(track => track.stop());
+                state.stream = null;
+            }
+
+            // Reset UI
+            if (state.animationId) cancelAnimationFrame(state.animationId);
+            els.video.style.display = "block";
+            els.canvas.style.display = "none";
+            els.overlay.classList.remove('visible');
+        }
+
+        // 3. Main Scan Loop
+        function scanLoop() {
+            if (!state.scanning) return;
+
+            if (els.video.readyState === els.video.HAVE_ENOUGH_DATA) {
+                // Resize canvas to match video stream
+                els.canvas.height = els.video.videoHeight;
+                els.canvas.width = els.video.videoWidth;
+
+                // Draw current frame for analysis
+                els.ctx.drawImage(els.video, 0, 0, els.canvas.width, els.canvas.height);
+
+                // Analyze
+                const imageData = els.ctx.getImageData(0, 0, els.canvas.width, els.canvas.height);
+
+                // Assuming jsQR is loaded in site.master or above this block
+                if (typeof jsQR !== 'undefined') {
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+
+                    if (code && code.data && code.data.length > 0) {
+                        handleDetection(code.data);
+                        return; // Stop the loop
+                    }
+                }
+            }
+
+            state.animationId = requestAnimationFrame(scanLoop);
+        }
+
+        // 4. Detection Logic
+        function handleDetection(url) {
+            console.log("Found URL:", url);
+
+            // Clear the timer immediately on success
+            if (state.scanTimer) clearTimeout(state.scanTimer);
+
+            // Basic Validation Check
+            if (!url.includes(config.domainCheck)) {
+               // Optional: Show error, for now we just ignore invalid codes
+               // requestAnimationFrame(scanLoop);
+               // return;
+            }
+
+            // FREEZE FRAME EFFECT
+            state.scanning = false; // Stop loop
+
+            // Draw the final frame permanently to canvas
+            els.ctx.drawImage(els.video, 0, 0, els.canvas.width, els.canvas.height);
+
+            // Hide video, show canvas (visual freeze)
+            els.video.style.display = "none";
+            els.canvas.style.display = "block";
+
+            // Show Overlay
+            els.overlay.classList.add('visible');
+
+            // Wait and Redirect
+            setTimeout(() => {
+                // Use replace to prevent back-button loops
+                window.location.replace(url);
+            }, config.validateDelay);
+        }
+
+        // --- Event Listeners ---
+        els.btnStart.addEventListener('click', startScanner);
+        els.btnCancel.addEventListener('click', stopScanner);
+
+    })();
+</script>

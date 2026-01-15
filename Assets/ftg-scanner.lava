@@ -1,0 +1,97 @@
+<div id="qr-container">
+    <div id="start-screen">
+        <button id="scan-btn">Scan Now</button>
+    </div>
+    <div id="scanner-screen" style="display: none;">f
+            <video id="video" playsinline></video>
+            <canvas id="canvas"></canvas>
+        <button id="cancel-btn">Cancel</button>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script>
+    (function() {
+        const scanBtn = document.getElementById('scan-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const startScreen = document.getElementById('start-screen');
+        const scannerScreen = document.getElementById('scanner-screen');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const loading = document.getElementById('loading');
+        const ctx = canvas.getContext('2d');
+        let stream = null;
+        let scanTimeout = null;
+
+        function isValidVRLUrl(url) {
+            try {
+                const parsed = new URL(url);
+                return parsed.hostname.endsWith('.vrl.church') || parsed.hostname === 'vrl.church';
+            } catch {
+                return false;
+            }
+        }
+
+        function stopScanning() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            if (scanTimeout) {
+                clearTimeout(scanTimeout);
+                scanTimeout = null;
+            }
+            scannerScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+            loading.style.display = 'none';
+            video.style.display = 'block';
+            cancelBtn.style.display = 'block';
+        }
+
+        scanBtn.addEventListener('click', () => {
+            startScreen.style.display = 'none';
+            scannerScreen.style.display = 'flex';
+
+            scanTimeout = setTimeout(() => {
+                stopScanning();
+            }, 30000);
+
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment" }
+            }).then(s => {
+                stream = s;
+                video.srcObject = stream;
+                video.play();
+                requestAnimationFrame(scan);
+            });
+        });
+
+        cancelBtn.addEventListener('click', stopScanning);
+
+        function scan() {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.height = video.videoHeight;
+                canvas.width = video.videoWidth;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                if (code && isValidVRLUrl(code.data)) {
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    video.style.display = 'none';
+                    cancelBtn.style.display = 'none';
+                    loading.style.display = 'flex';
+
+                    setTimeout(() => {
+                        window.location.replace(code.data);
+                    }, 200);
+                    return;
+                }
+            }
+            requestAnimationFrame(scan);
+        }
+    })();
+</script>

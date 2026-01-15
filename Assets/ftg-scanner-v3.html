@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner - Rock VRL</title>
+    
+    <!-- GSAP CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    
+    <style>
+        /* ========================================
+           GLOBAL RESETS & BODY
+           ======================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body.rock-blank {
+            background: #000 !important;
+            overflow: hidden;
+        }
+
+        main {
+            min-height: 100vh;
+            background-color: #000;
+        }
+
+        /* ========================================
+           ROCK UI HIDING (SHARED)
+           ======================================== */
+        .panel.panel-block,
+        .panel-body {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .panel-heading,
+        .block-configuration,
+        .zone-configuration {
+            display: none !important;
+        }
+
+        div#bid_19970 {
+            width: 100%;
+        }
+
+        #zone-main {
+            height: 100vh;
+        }
+
+        #zone-main .zone-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 100vh;
+            width: 100% !important;
+        }
+
+        /* ========================================
+           ALERT STYLING (SHARED)
+           ======================================== */
+        .alert {
+            padding: 1.5rem;
+            border-radius: 24px;
+            font-size: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            gap: 2rem;
+        }
+
+        .alert.alert-danger {
+            background-color: hsl(6, 77%, 27%);
+            color: #fff;
+        }
+
+        .alert.alert-success {
+            background-color: hsl(147deg 79% 28%);
+            color: hsl(147deg 39% 94%);
+        }
+
+        .__ftg-response-msg i {
+            font-size: 4.5rem;
+            text-align: center;
+        }
+
+        /* ========================================
+           SCANNER CONTAINER
+           ======================================== */
+        #qr-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+            background: #000;
+        }
+
+        /* ========================================
+           START SCREEN (SCAN NOW BUTTON)
+           ======================================== */
+        #start-screen {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            z-index: 10;
+        }
+
+        /* ========================================
+           SCANNER SCREEN (CAMERA + CANCEL)
+           ======================================== */
+        #scanner-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2rem;
+            background: #000;
+            transform: translateY(100vh);
+        }
+
+        #video-container {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+            background: #111;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        /* ========================================
+           CAPTURED OVERLAY
+           ======================================== */
+        #captured-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        #captured-overlay.active {
+            display: flex;
+        }
+
+        .captured-message {
+            font-size: 3rem;
+            font-weight: 900;
+            color: hsl(120, 100%, 45%);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            text-shadow: 
+                0 0 20px hsl(120, 100%, 45%),
+                0 0 40px hsl(120, 100%, 35%),
+                0 0 60px hsl(120, 100%, 25%);
+            animation: pulse 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { opacity: 0.8; }
+            to { opacity: 1; }
+        }
+
+        /* ========================================
+           BUTTON BASE STYLES
+           ======================================== */
+        .scanner-btn {
+            width: 100%;
+            max-width: 600px;
+            outline: none;
+            color: #fff;
+            font-size: 2rem;
+            font-weight: 700;
+            padding: 1.5rem;
+            text-transform: uppercase;
+            border-radius: 12rem;
+            transition: all 0.15s ease;
+            cursor: pointer;
+            border: none;
+            position: relative;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* ========================================
+           SCAN NOW BUTTON (GREEN)
+           ======================================== */
+        #scan-btn {
+            background: hsl(120, 100%, 25%);
+            border: 3px solid hsl(120, 100%, 35%);
+            box-shadow: 
+                0 0 30px hsla(120, 100%, 45%, 0.4),
+                0 8px 20px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 hsla(120, 100%, 45%, 0.3);
+        }
+
+        #scan-btn:active {
+            transform: scale(0.96) translateY(2px);
+            box-shadow: 
+                0 0 50px hsla(120, 100%, 45%, 0.7),
+                0 4px 10px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 hsla(120, 100%, 45%, 0.3);
+        }
+
+        /* ========================================
+           CANCEL BUTTON (RED)
+           ======================================== */
+        #cancel-btn {
+            background: hsl(0, 81%, 39%);
+            border: 3px solid hsl(0, 81%, 60%);
+            box-shadow: 
+                0 0 30px hsla(0, 81%, 50%, 0.4),
+                0 8px 20px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 hsla(0, 81%, 60%, 0.3);
+        }
+
+        #cancel-btn:active {
+            transform: scale(0.96) translateY(2px);
+            box-shadow: 
+                0 0 50px hsla(0, 81%, 50%, 0.7),
+                0 4px 10px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 hsla(0, 81%, 60%, 0.3);
+        }
+
+        /* ========================================
+           CAMERA ICON BUTTON (SHARED - ON REDEEM PAGE)
+           ======================================== */
+        .__ftg-backtoscan {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .__ftg-backtoscan-button {
+            font-size: 3rem;
+            padding: 1.5rem;
+            aspect-ratio: 1 / 1;
+            border-radius: 50%;
+            background: hsl(0, 0%, 70%);
+            border: 3px solid hsl(0, 0%, 90%);
+            color: #000;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 
+                0 0 20px hsla(0, 0%, 70%, 0.3),
+                0 6px 15px rgba(0, 0, 0, 0.4);
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .__ftg-backtoscan-button:active {
+            transform: scale(0.94) translateY(2px);
+            background: hsl(0, 0%, 80%);
+            box-shadow: 
+                0 0 30px hsla(0, 0%, 80%, 0.5),
+                0 3px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        /* ========================================
+           RESPONSIVE ADJUSTMENTS
+           ======================================== */
+        @media (max-width: 768px) {
+            .scanner-btn {
+                font-size: 1.75rem;
+                padding: 1.25rem;
+            }
+
+            .captured-message {
+                font-size: 2.5rem;
+            }
+
+            .__ftg-backtoscan-button {
+                font-size: 2.5rem;
+                padding: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body class="rock-blank">
+    <div id="qr-container">
+        <!-- Start Screen: Scan Now Button -->
+        <div id="start-screen">
+            <button id="scan-btn" class="scanner-btn">Scan Now</button>
+        </div>
+
+        <!-- Scanner Screen: Camera View + Cancel Button -->
+        <div id="scanner-screen">
+            <div id="video-container">
+                <video id="video" playsinline autoplay></video>
+                <canvas id="canvas"></canvas>
+            </div>
+            <button id="cancel-btn" class="scanner-btn">Cancel</button>
+        </div>
+
+        <!-- Captured Overlay -->
+        <div id="captured-overlay">
+            <div class="captured-message">Captured!</div>
+        </div>
+    </div>
+
+    <!-- jsQR Library -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+    <script>
+        (function() {
+            'use strict';
+
+            /* ========================================
+               DOM ELEMENTS
+               ======================================== */
+            const scanBtn = document.getElementById('scan-btn');
+            const cancelBtn = document.getElementById('cancel-btn');
+            const startScreen = document.getElementById('start-screen');
+            const scannerScreen = document.getElementById('scanner-screen');
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const capturedOverlay = document.getElementById('captured-overlay');
+            const ctx = canvas.getContext('2d');
+
+            /* ========================================
+               STATE MANAGEMENT
+               ======================================== */
+            let stream = null;
+            let scanTimeout = null;
+            let isScanning = false;
+
+            /* ========================================
+               HAPTIC FEEDBACK
+               ======================================== */
+            function triggerHaptic(style = 'medium') {
+                if (navigator.vibrate) {
+                    // Vibration patterns for different styles
+                    const patterns = {
+                        light: 10,
+                        medium: 20,
+                        heavy: 30
+                    };
+                    navigator.vibrate(patterns[style] || patterns.medium);
+                }
+            }
+
+            /* ========================================
+               URL VALIDATION
+               ======================================== */
+            function isValidVRLUrl(url) {
+                try {
+                    const parsed = new URL(url);
+                    const isValidDomain = parsed.hostname.endsWith('.vrl.church') || 
+                                         parsed.hostname === 'vrl.church';
+                    const isValidPath = parsed.pathname.includes('/ftg-redeem');
+                    return isValidDomain && isValidPath;
+                } catch {
+                    return false;
+                }
+            }
+
+            /* ========================================
+               STOP SCANNING & CLEANUP
+               ======================================== */
+            function stopScanning() {
+                isScanning = false;
+
+                // Stop camera stream
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+
+                // Clear timeout
+                if (scanTimeout) {
+                    clearTimeout(scanTimeout);
+                    scanTimeout = null;
+                }
+
+                // Animate back to start screen
+                gsap.to(scannerScreen, {
+                    y: '100vh',
+                    duration: 0.3,
+                    ease: 'power2.in'
+                });
+
+                gsap.to(startScreen, {
+                    y: 0,
+                    duration: 0.3,
+                    ease: 'power2.out'
+                });
+            }
+
+            /* ========================================
+               START SCANNING
+               ======================================== */
+            function startScanning() {
+                triggerHaptic('medium');
+                isScanning = true;
+
+                // Animate screens - move everything up by full viewport height
+                gsap.to(startScreen, {
+                    y: '-100vh',
+                    duration: 0.35,
+                    ease: 'power2.inOut'
+                });
+
+                gsap.to(scannerScreen, {
+                    y: 0,
+                    duration: 0.35,
+                    ease: 'power2.inOut'
+                });
+
+                // Set 30 second timeout
+                scanTimeout = setTimeout(() => {
+                    console.log('Scan timeout - stopping scanner');
+                    stopScanning();
+                }, 30000);
+
+                // Request camera access
+                navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                })
+                .then(s => {
+                    stream = s;
+                    video.srcObject = stream;
+                    
+                    // Wait for video to be ready before starting scan loop
+                    video.onloadedmetadata = () => {
+                        video.play().then(() => {
+                            console.log('Camera started, beginning scan loop');
+                            requestAnimationFrame(scan);
+                        });
+                    };
+                })
+                .catch(err => {
+                    console.error('Camera access error:', err);
+                    alert('Unable to access camera. Please check permissions.');
+                    stopScanning();
+                });
+            }
+
+            /* ========================================
+               QR CODE SCANNING LOOP
+               ======================================== */
+            function scan() {
+                if (!isScanning) {
+                    console.log('Scan stopped - isScanning is false');
+                    return;
+                }
+
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    // Set canvas dimensions to match video
+                    canvas.height = video.videoHeight;
+                    canvas.width = video.videoWidth;
+                    
+                    // Draw current video frame to canvas
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // Get image data and scan for QR code
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: 'dontInvert'
+                    });
+
+                    // Check if valid QR code found
+                    if (code) {
+                        console.log('QR code found:', code.data);
+                        if (isValidVRLUrl(code.data)) {
+                            handleQRCodeDetected(code.data);
+                            return; // Stop scanning loop
+                        } else {
+                            console.log('QR code found but not valid VRL URL');
+                        }
+                    }
+                }
+
+                // Continue scanning
+                requestAnimationFrame(scan);
+            }
+
+            /* ========================================
+               HANDLE QR CODE DETECTION
+               ======================================== */
+            function handleQRCodeDetected(url) {
+                console.log('QR Code detected:', url);
+                
+                // Stop scanning immediately
+                isScanning = false;
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+
+                // Trigger haptic feedback
+                triggerHaptic('heavy');
+
+                // Show "CAPTURED!" overlay
+                capturedOverlay.classList.add('active');
+                
+                // Animate captured message
+                gsap.from('.captured-message', {
+                    scale: 0.5,
+                    opacity: 0,
+                    duration: 0.3,
+                    ease: 'back.out(2)'
+                });
+
+                // Wait 2 seconds then navigate
+                setTimeout(() => {
+                    window.location.replace(url);
+                }, 2000);
+            }
+
+            /* ========================================
+               EVENT LISTENERS
+               ======================================== */
+            scanBtn.addEventListener('click', startScanning);
+            cancelBtn.addEventListener('click', () => {
+                triggerHaptic('light');
+                stopScanning();
+            });
+
+            // Prevent accidental navigation on page load
+            window.addEventListener('pageshow', (event) => {
+                if (event.persisted) {
+                    stopScanning();
+                }
+            });
+
+        })();
+    </script>
+</body>
+</html>
